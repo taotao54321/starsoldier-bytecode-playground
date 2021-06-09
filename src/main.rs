@@ -12,7 +12,7 @@ fn set_render_target_camera(rt: RenderTarget) {
     set_camera(&Camera2D {
         target: vec2(w / 2., h / 2.),
         offset: vec2(0., 0.),
-        zoom: vec2(w.recip(), h.recip()),
+        zoom: vec2(1. / w * 2., 1. / h * 2.),
         rotation: 0.,
         render_target: Some(rt),
     });
