@@ -88,7 +88,7 @@ async fn main() -> eyre::Result<()> {
                     "cannot parse sprite index base"
                 );
                 let program = try_!(bytecode::asm(assembly.as_bytes()), "assemble failed");
-                let rank = try_!(parse_int::parse::<u8>(&rank_str), "cannot parse rank");
+                let rank = try_!(rank_parse(&rank_str), "cannot parse rank");
                 let enemy_init = playground::EnemyInit {
                     sprite_idx_base,
                     program,
@@ -206,9 +206,18 @@ fn entrypoints_format(entrypoints: &[usize]) -> String {
 fn entrypoints_parse(entrypoints_str: &str, count: usize) -> eyre::Result<Vec<usize>> {
     let entrypoints = entrypoints_str
         .split(',')
-        .map(|s| s.trim().parse::<usize>())
+        .map(|s| parse_int::parse::<usize>(s.trim()))
         .collect::<Result<Vec<_>, _>>()?;
     eyre::ensure!(entrypoints.len() == count, "entrypoint count mismatch");
 
     Ok(entrypoints)
+}
+
+fn rank_parse(rank_str: &str) -> eyre::Result<u8> {
+    const RANGE: std::ops::RangeInclusive<u8> = 0..=7;
+
+    let rank = parse_int::parse::<u8>(rank_str)?;
+    eyre::ensure!(RANGE.contains(&rank), "rank must be within {:?}", RANGE);
+
+    Ok(rank)
 }
