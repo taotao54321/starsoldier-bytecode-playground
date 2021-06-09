@@ -30,6 +30,7 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() -> eyre::Result<()> {
     let mut game = playground::Game::default();
+    let mut spawner = None;
     let mut enemys = vec![];
 
     let screen = render_target(256, 240);
@@ -54,7 +55,7 @@ async fn main() -> eyre::Result<()> {
 
     macro_rules! build_enemy_spawner {
         () => {{
-            macro_rules! unwrap_or_break {
+            macro_rules! try_ {
                 ($res:expr, $msg:expr) => {{
                     if let Err(e) = $res {
                         break Err(format!("{}: {}", $msg, e));
@@ -63,13 +64,15 @@ async fn main() -> eyre::Result<()> {
                 }};
             }
             loop {
-                let sprite_idx_base = unwrap_or_break!(
+                let spawn_interval = 8;
+                let spawn_count = 8;
+                let entrypoints = [0; 8];
+                let sprite_idx_base = try_!(
                     parse_int::parse::<u8>(&sprite_idx_base_str),
                     "cannot parse sprite index base"
                 );
-                let program =
-                    unwrap_or_break!(bytecode::asm(assembly.as_bytes()), "assemble failed");
-                let enemy = playground::EnemyInit {
+                let program = try_!(bytecode::asm(assembly.as_bytes()), "assemble failed");
+                let enemy_init = playground::EnemyInit {
                     sprite_idx_base,
                     program,
                     boss: false,
@@ -82,9 +85,13 @@ async fn main() -> eyre::Result<()> {
                     rank: 0,
                     x: 0,
                     y: 0,
-                }
-                .init(0);
-                break Ok(enemy);
+                };
+                break Ok(playground::EnemySpawner::new(
+                    spawn_interval,
+                    spawn_count,
+                    &entrypoints,
+                    enemy_init,
+                ));
             }
         }};
     }
@@ -115,11 +122,18 @@ async fn main() -> eyre::Result<()> {
 
                 if ui.button(None, "Play") {
                     match build_enemy_spawner!() {
-                        Ok(enemy) => enemys.push(enemy),
+                        Ok(inner) => spawner = Some(inner),
                         Err(e) => warn!("{}", e),
                     }
+                    enemys.clear();
                 }
             });
+
+        if let Some(inner) = spawner.as_mut() {
+            if let Some(enemy) = inner.step() {
+                enemys.push(enemy);
+            }
+        }
 
         for enemy in &mut enemys {
             enemy.step(&mut game)?;

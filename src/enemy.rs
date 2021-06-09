@@ -41,9 +41,11 @@ impl EnemySpawner {
             return None;
         }
 
-        self.spawn_timer = self.spawn_interval;
-
         let pc = self.entrypoints[self.entrypoints.len() - self.spawn_remain];
+
+        self.spawn_timer = self.spawn_interval;
+        self.spawn_remain -= 1;
+
         Some(self.enemy_init.init(pc))
     }
 }
