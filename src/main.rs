@@ -59,6 +59,7 @@ async fn main() -> eyre::Result<()> {
     let mut second_round = false;
     let mut stage_str = "1".to_owned();
     let mut rank_str = "0".to_owned();
+    let mut rng_idx_str = "0".to_owned();
 
     macro_rules! load_preset {
         () => {{
@@ -122,6 +123,10 @@ async fn main() -> eyre::Result<()> {
                 let program = try_!(bytecode::asm(assembly.as_bytes()), "assemble failed");
                 let stage = try_!(stage_parse(&stage_str), "cannot parse stage");
                 let rank = try_!(rank_parse(&rank_str), "cannot parse rank");
+                let rng_idx = try_!(
+                    parse_int::parse::<u8>(&rng_idx_str),
+                    "cannot parse RNG index"
+                );
                 let enemy_init = playground::EnemyInit {
                     sprite_idx_base,
                     program,
@@ -138,6 +143,7 @@ async fn main() -> eyre::Result<()> {
                 };
                 game.second_round = second_round;
                 game.stage = stage;
+                game.rng_idx = rng_idx;
                 break Ok(playground::EnemySpawner::new(
                     spawn_interval,
                     spawn_count,
@@ -209,6 +215,7 @@ async fn main() -> eyre::Result<()> {
                 ui.checkbox(hash!(), "<- 2nd round", &mut second_round);
                 ui.input_text(hash!(), "<- stage", &mut stage_str);
                 ui.input_text(hash!(), "<- rank", &mut rank_str);
+                ui.input_text(hash!(), "<- RNG index", &mut rng_idx_str);
 
                 if ui.button(None, "Play") {
                     match build_enemy_spawner!() {
