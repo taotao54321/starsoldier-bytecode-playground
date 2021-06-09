@@ -1,0 +1,54 @@
+        loop_begin 9
+        set_homing_timer 1
+        move 0x18
+        loop_begin 2
+        set_sprite 0
+        set_inversion 1, 0
+        move 0x24
+        move 0x25
+        move 0x15
+        move 0x15
+        move 0x15
+        move 0x16
+        move 0x06
+        move 0x06
+        move 0x07
+        move 0x08
+        move 0x08
+        move 0x09
+        move 0x0A
+        move 0x0A
+        move 0x1A
+        move 0x1B
+        move 0x1B
+        move 0x1B
+        move 0x2B
+        move 0x2C
+        set_sprite 1
+        set_inversion 0, 0
+        move 0x24
+        move 0x25
+        move 0x15
+        move 0x15
+        move 0x15
+        move 0x16
+        move 0x06
+        move 0x06
+        move 0x07
+        move 0x08
+        move 0x08
+        move 0x09
+        move 0x0A
+        move 0x0A
+        move 0x1A
+        move 0x1B
+        move 0x1B
+        move 0x1B
+        move 0x2B
+        move 0x2C
+        shoot_aim 0
+        loop_end
+        set_sprite 2
+L33:
+        move 0x10
+        jump L33

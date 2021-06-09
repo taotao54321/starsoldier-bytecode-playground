@@ -1,0 +1,51 @@
+        randomize_x 0xF0
+        set_homing_timer 10
+        loop_begin 8
+        set_sprite 0
+        set_inversion 1, 0
+        move 0x24
+        move 0x25
+        move 0x15
+        move 0x15
+        move 0x15
+        move 0x16
+        move 0x06
+        move 0x06
+        move 0x07
+        move 0x08
+        move 0x08
+        move 0x09
+        move 0x0A
+        move 0x0A
+        move 0x1A
+        move 0x1B
+        move 0x1B
+        move 0x1B
+        move 0x2B
+        move 0x2C
+        shoot_aim 0
+        set_sprite 1
+        set_inversion 0, 0
+        move 0x13
+        move 0x13
+        move 0x13
+        move 0x12
+        move 0x02
+        move 0x02
+        move 0x01
+        move 0x00
+        move 0x00
+        move 0x0F
+        move 0x0E
+        move 0x0E
+        move 0x1E
+        move 0x1D
+        move 0x1D
+        move 0x1D
+        move 0x2D
+        move 0x2C
+        shoot_aim 0
+        loop_end
+L31:
+        move 0x00
+        jump L31
