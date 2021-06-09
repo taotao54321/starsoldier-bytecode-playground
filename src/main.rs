@@ -43,16 +43,36 @@ async fn main() -> eyre::Result<()> {
     let mut preset_idx = Some(0);
 
     let mut sprite_idx_base_str: String;
+    let mut boss: bool;
+    let mut difficulty_str: String;
+    let mut shot_with_rank: bool;
+    let mut accel_shot_with_rank: bool;
+    let mut homing_shot_with_rank: bool;
+    let mut extra_act_with_rank: bool;
+    let mut accel_with_rank: bool;
+    let mut x_ini_str: String;
+    let mut y_ini_str: String;
     let mut assembly: String;
     let mut spawn_interval_str: String;
     let mut spawn_count_str: String;
     let mut entrypoints_str: String;
+    let mut second_round = false;
+    let mut stage_str = "1".to_owned();
     let mut rank_str = "0".to_owned();
 
     macro_rules! load_preset {
         () => {{
             let preset = &playground::ENEMY_GROUP_PRESETS[preset_idx.unwrap()];
             sprite_idx_base_str = format!("{:#04X}", preset.sprite_idx_base);
+            boss = preset.boss;
+            difficulty_str = preset.difficulty.to_string();
+            shot_with_rank = preset.shot_with_rank;
+            accel_shot_with_rank = preset.accel_shot_with_rank;
+            homing_shot_with_rank = preset.homing_shot_with_rank;
+            extra_act_with_rank = preset.extra_act_with_rank;
+            accel_with_rank = preset.accel_with_rank;
+            x_ini_str = preset.x_ini.to_string();
+            y_ini_str = preset.y_ini.to_string();
             assembly = preset.assembly.to_owned();
             spawn_interval_str = preset.spawn_interval.to_string();
             spawn_count_str = preset.spawn_count.to_string();
@@ -87,22 +107,37 @@ async fn main() -> eyre::Result<()> {
                     parse_int::parse::<u8>(&sprite_idx_base_str),
                     "cannot parse sprite index base"
                 );
+                let difficulty = try_!(
+                    parse_int::parse::<u8>(&difficulty_str),
+                    "cannot parse difficulty"
+                );
+                let x_ini = try_!(
+                    parse_int::parse::<u8>(&x_ini_str),
+                    "cannot parse initial position x"
+                );
+                let y_ini = try_!(
+                    parse_int::parse::<u8>(&y_ini_str),
+                    "cannot parse initial position y"
+                );
                 let program = try_!(bytecode::asm(assembly.as_bytes()), "assemble failed");
+                let stage = try_!(stage_parse(&stage_str), "cannot parse stage");
                 let rank = try_!(rank_parse(&rank_str), "cannot parse rank");
                 let enemy_init = playground::EnemyInit {
                     sprite_idx_base,
                     program,
-                    boss: false,
-                    difficulty: 1,
-                    shot_with_rank: false,
-                    accel_shot_with_rank: false,
-                    homing_shot_with_rank: false,
-                    extra_act_with_rank: false,
-                    accel_with_rank: false,
+                    boss,
+                    difficulty,
+                    shot_with_rank,
+                    accel_shot_with_rank,
+                    homing_shot_with_rank,
+                    extra_act_with_rank,
+                    accel_with_rank,
                     rank,
-                    x: 0,
-                    y: 0,
+                    x: x_ini,
+                    y: y_ini,
                 };
+                game.second_round = second_round;
+                game.stage = stage;
                 break Ok(playground::EnemySpawner::new(
                     spawn_interval,
                     spawn_count,
@@ -135,16 +170,44 @@ async fn main() -> eyre::Result<()> {
                 ui.separator();
 
                 // enemy init
-                ui.input_text(hash!(), "<- sprite base", &mut sprite_idx_base_str);
+                ui.tree_node(hash!(), "enemy params", |ui| {
+                    ui.input_text(hash!(), "<- sprite base", &mut sprite_idx_base_str);
+                    ui.checkbox(hash!(), "<- boss", &mut boss);
+                    ui.input_text(hash!(), "<- difficulty", &mut difficulty_str);
+                    ui.checkbox(hash!(), "<- do not shoot at low rank", &mut shot_with_rank);
+                    ui.checkbox(
+                        hash!(),
+                        "<- accel shots with rank",
+                        &mut accel_shot_with_rank,
+                    );
+                    ui.checkbox(
+                        hash!(),
+                        "<- shoot homing bullets at high rank",
+                        &mut homing_shot_with_rank,
+                    );
+                    ui.checkbox(
+                        hash!(),
+                        "<- extra action at high rank",
+                        &mut extra_act_with_rank,
+                    );
+                    ui.checkbox(hash!(), "<- accel with rank", &mut accel_with_rank);
+                    ui.input_text(hash!(), "<- initial position x", &mut x_ini_str);
+                    ui.input_text(hash!(), "<- initial position y", &mut y_ini_str);
+                });
                 ui.editbox(hash!(), vec2(500., 500.), &mut assembly);
-
-                // spawn
-                ui.input_text(hash!(), "<- spawn interval", &mut spawn_interval_str);
-                ui.input_text(hash!(), "<- spawn count", &mut spawn_count_str);
-                ui.input_text(hash!(), "<- entrypoints", &mut entrypoints_str);
                 ui.separator();
 
+                // spawn
+                ui.tree_node(hash!(), "spawn", |ui| {
+                    ui.input_text(hash!(), "<- spawn interval", &mut spawn_interval_str);
+                    ui.input_text(hash!(), "<- spawn count", &mut spawn_count_str);
+                    ui.input_text(hash!(), "<- entrypoints", &mut entrypoints_str);
+                    ui.separator();
+                });
+
                 // env
+                ui.checkbox(hash!(), "<- 2nd round", &mut second_round);
+                ui.input_text(hash!(), "<- stage", &mut stage_str);
                 ui.input_text(hash!(), "<- rank", &mut rank_str);
 
                 if ui.button(None, "Play") {
@@ -211,6 +274,15 @@ fn entrypoints_parse(entrypoints_str: &str, count: usize) -> eyre::Result<Vec<us
     eyre::ensure!(entrypoints.len() == count, "entrypoint count mismatch");
 
     Ok(entrypoints)
+}
+
+fn stage_parse(stage_str: &str) -> eyre::Result<u8> {
+    const RANGE: std::ops::RangeInclusive<u8> = 1..=16;
+
+    let stage = parse_int::parse::<u8>(stage_str)?;
+    eyre::ensure!(RANGE.contains(&stage), "stage must be within {:?}", RANGE);
+
+    Ok(stage)
 }
 
 fn rank_parse(rank_str: &str) -> eyre::Result<u8> {
