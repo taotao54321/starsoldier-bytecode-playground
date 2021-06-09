@@ -44,12 +44,19 @@ async fn main() -> eyre::Result<()> {
 
     let mut sprite_idx_base_str: String;
     let mut assembly: String;
+    let mut spawn_interval_str: String;
+    let mut spawn_count_str: String;
+    let mut entrypoints_str: String;
+    let mut rank_str = "0".to_owned();
 
     macro_rules! load_preset {
         () => {{
             let preset = &playground::ENEMY_GROUP_PRESETS[preset_idx.unwrap()];
             sprite_idx_base_str = format!("{:#04X}", preset.sprite_idx_base);
             assembly = preset.assembly.to_owned();
+            spawn_interval_str = preset.spawn_interval.to_string();
+            spawn_count_str = preset.spawn_count.to_string();
+            entrypoints_str = entrypoints_format(preset.entrypoints);
         }};
     }
 
@@ -64,14 +71,24 @@ async fn main() -> eyre::Result<()> {
                 }};
             }
             loop {
-                let spawn_interval = 8;
-                let spawn_count = 8;
-                let entrypoints = [0; 8];
+                let spawn_interval = try_!(
+                    parse_int::parse::<usize>(&spawn_interval_str),
+                    "cannot parse spawn interval"
+                );
+                let spawn_count = try_!(
+                    parse_int::parse::<usize>(&spawn_count_str),
+                    "cannot parse spawn count"
+                );
+                let entrypoints = try_!(
+                    entrypoints_parse(&entrypoints_str, spawn_count),
+                    "entrypoints error"
+                );
                 let sprite_idx_base = try_!(
                     parse_int::parse::<u8>(&sprite_idx_base_str),
                     "cannot parse sprite index base"
                 );
                 let program = try_!(bytecode::asm(assembly.as_bytes()), "assemble failed");
+                let rank = try_!(parse_int::parse::<u8>(&rank_str), "cannot parse rank");
                 let enemy_init = playground::EnemyInit {
                     sprite_idx_base,
                     program,
@@ -82,7 +99,7 @@ async fn main() -> eyre::Result<()> {
                     homing_shot_with_rank: false,
                     extra_act_with_rank: false,
                     accel_with_rank: false,
-                    rank: 0,
+                    rank,
                     x: 0,
                     y: 0,
                 };
@@ -105,6 +122,7 @@ async fn main() -> eyre::Result<()> {
             .label("Control")
             .titlebar(true)
             .ui(&mut *root_ui(), |ui| {
+                // preset
                 ui.combo_box(
                     hash!(),
                     "<- presets", // XXX: ラベルが空だと項目リストが正しく表示されない?
@@ -114,11 +132,20 @@ async fn main() -> eyre::Result<()> {
                 if ui.button(None, "Load Preset") {
                     load_preset!();
                 }
-
                 ui.separator();
 
+                // enemy init
                 ui.input_text(hash!(), "<- sprite base", &mut sprite_idx_base_str);
                 ui.editbox(hash!(), vec2(500., 500.), &mut assembly);
+
+                // spawn
+                ui.input_text(hash!(), "<- spawn interval", &mut spawn_interval_str);
+                ui.input_text(hash!(), "<- spawn count", &mut spawn_count_str);
+                ui.input_text(hash!(), "<- entrypoints", &mut entrypoints_str);
+                ui.separator();
+
+                // env
+                ui.input_text(hash!(), "<- rank", &mut rank_str);
 
                 if ui.button(None, "Play") {
                     match build_enemy_spawner!() {
@@ -170,4 +197,18 @@ fn make_preset_variants() -> Vec<String> {
         .iter()
         .map(|e| format!("{:#04X} {}", e.id, e.name))
         .collect()
+}
+
+fn entrypoints_format(entrypoints: &[usize]) -> String {
+    itertools::join(entrypoints, ", ")
+}
+
+fn entrypoints_parse(entrypoints_str: &str, count: usize) -> eyre::Result<Vec<usize>> {
+    let entrypoints = entrypoints_str
+        .split(',')
+        .map(|s| s.trim().parse::<usize>())
+        .collect::<Result<Vec<_>, _>>()?;
+    eyre::ensure!(entrypoints.len() == count, "entrypoint count mismatch");
+
+    Ok(entrypoints)
 }
