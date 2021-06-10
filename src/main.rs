@@ -241,7 +241,7 @@ async fn main() -> eyre::Result<()> {
 
         clear_background(BLACK);
         for enemy in &enemys {
-            let tex = playground::ENEMY_SPRITES[usize::from(enemy.sprite_index())];
+            let tex = playground::METASPRITES[usize::from(enemy.sprite_index())];
             draw_texture(tex, enemy.x().into(), enemy.y().into(), WHITE);
         }
 
